@@ -2662,6 +2662,13 @@ body {
 .toast.danger { border-color: rgba(255, 69, 58, 0.5); }
 
 /* Upload Queue Elements */
+.upload-queue-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
 .queue-item-card {
   display: flex;
   align-items: center;
@@ -3359,17 +3366,58 @@ body {
 
   /* Upload Dropzone on Mobile */
   .upload-dropzone {
-    padding: 20px 10px;
+    padding: 14px 10px;
+  }
+
+  .dropzone-illustration {
+    display: none;
+  }
+
+  .upload-dropzone h3 {
+    font-size: 1.15rem;
+    margin-bottom: 2px;
+  }
+
+  .upload-dropzone p {
+    font-size: 0.75rem;
+    margin-bottom: 10px;
   }
 
   .dropzone-buttons {
     flex-direction: column;
     width: 100%;
+    gap: 8px;
   }
 
   .dropzone-buttons .btn {
     width: 100%;
-    min-height: 44px;
+    min-height: 40px;
+    font-size: 0.82rem;
+  }
+
+  .queue-item-card {
+    padding: 10px;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .queue-thumb {
+    width: 44px;
+    height: 44px;
+  }
+
+  .queue-filename {
+    font-size: 0.78rem;
+  }
+
+  .meta-pill {
+    font-size: 0.68rem;
+    padding: 2px 8px;
+  }
+
+  .meta-dest-path {
+    font-size: 0.68rem;
+    word-break: break-all;
   }
 
   /* ==========================================================================

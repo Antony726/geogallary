@@ -137,8 +137,10 @@ export class UploadModal {
   }
 
   open() {
-    this.updateDestinationLabel();
+    this.queue = [];
+    this.renderQueue();
     this.resetFileInputs();
+    this.updateDestinationLabel();
     if (this.modalEl) this.modalEl.style.display = 'flex';
   }
 
@@ -165,6 +167,8 @@ export class UploadModal {
 
   close() {
     if (this.isUploading) return;
+    this.queue = [];
+    this.renderQueue();
     this.resetFileInputs();
     if (this.modalEl) this.modalEl.style.display = 'none';
   }
@@ -179,7 +183,7 @@ export class UploadModal {
     }
 
     showToast(`Processing EXIF metadata for ${mediaFiles.length} files...`, 'info');
-    if (this.queueSection) this.queueSection.style.display = 'flex';
+    if (this.queueSection) this.queueSection.style.display = 'block';
 
     for (const file of mediaFiles) {
       const meta = await exifService.extractMetadata(file);
@@ -218,10 +222,11 @@ export class UploadModal {
     if (this.queue.length === 0) {
       if (this.queueSection) this.queueSection.style.display = 'none';
       if (this.btnStartOrganize) this.btnStartOrganize.disabled = true;
+      if (this.queueItemsList) this.queueItemsList.innerHTML = '';
       return;
     }
 
-    if (this.queueSection) this.queueSection.style.display = 'flex';
+    if (this.queueSection) this.queueSection.style.display = 'block';
     if (this.btnStartOrganize) this.btnStartOrganize.disabled = false;
 
     this.queueItemsList.innerHTML = '';
