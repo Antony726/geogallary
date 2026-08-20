@@ -85,13 +85,17 @@ export class MapView {
 
   toggleDrawer() {
     if (!this.placesDrawer) return;
-    this.placesDrawer.classList.toggle('collapsed');
-    this.placesDrawer.classList.toggle('expanded-mobile');
+    const isCollapsed = this.placesDrawer.classList.contains('collapsed');
+    if (isCollapsed) {
+      this.placesDrawer.classList.remove('collapsed');
+      this.placesDrawer.classList.add('expanded-mobile');
+    } else {
+      this.placesDrawer.classList.add('collapsed');
+      this.placesDrawer.classList.remove('expanded-mobile');
+    }
     const icon = this.btnToggleDrawer ? this.btnToggleDrawer.querySelector('iconify-icon, i') : null;
     if (icon) {
-      icon.setAttribute('icon', (this.placesDrawer.classList.contains('collapsed') || !this.placesDrawer.classList.contains('expanded-mobile'))
-        ? 'lucide:chevron-up' 
-        : 'lucide:chevron-down');
+      icon.setAttribute('icon', this.placesDrawer.classList.contains('collapsed') ? 'lucide:chevron-up' : 'lucide:chevron-down');
     }
   }
 
@@ -389,7 +393,9 @@ export class MapView {
       if (!placeMap[loc]) {
         placeMap[loc] = {
           name: loc,
+          district: item.district,
           city: item.city,
+          state: item.state,
           country: item.country,
           lat: item.latitude,
           lng: item.longitude,
@@ -404,6 +410,7 @@ export class MapView {
     const places = Object.values(placeMap).filter(p => {
       if (!filter) return true;
       return p.name.toLowerCase().includes(filter) ||
+             (p.district && p.district.toLowerCase().includes(filter)) ||
              (p.city && p.city.toLowerCase().includes(filter)) ||
              (p.country && p.country.toLowerCase().includes(filter));
     });
@@ -416,10 +423,22 @@ export class MapView {
     places.forEach((place) => {
       const itemEl = document.createElement('div');
       itemEl.className = 'map-place-item';
+      
+      let subtext = 'Global';
+      if (place.district && place.state && place.district !== place.state) {
+        subtext = `${place.district}, ${place.state}`;
+      } else if (place.city && place.state && place.city !== place.state) {
+        subtext = `${place.city}, ${place.state}`;
+      } else if (place.district || place.city) {
+        subtext = place.district || place.city;
+      } else if (place.country) {
+        subtext = place.country;
+      }
+
       itemEl.innerHTML = `
         <div class="map-place-info">
           <span class="map-place-name">${place.name}</span>
-          <span class="map-place-sub">${place.country || 'Global'}</span>
+          <span class="map-place-sub"><iconify-icon icon="lucide:map-pin" style="color: var(--accent); margin-right: 3px;"></iconify-icon>${subtext}</span>
         </div>
         <span class="map-place-count">${place.count}</span>
       `;
