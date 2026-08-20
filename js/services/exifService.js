@@ -25,7 +25,9 @@ class ExifService {
       hasGps: false,
       hasExifDate: false,
       locationName: CONFIG.DEFAULT_LOCATION.name,
+      district: CONFIG.DEFAULT_LOCATION.district || 'Chennai',
       city: CONFIG.DEFAULT_LOCATION.city,
+      state: CONFIG.DEFAULT_LOCATION.state || 'Tamil Nadu',
       country: CONFIG.DEFAULT_LOCATION.country,
       exif: {
         make: 'Unknown',
@@ -80,7 +82,9 @@ class ExifService {
         // Auto reverse geocode coordinates
         const geoInfo = await geoService.reverseGeocode(baseResult.latitude, baseResult.longitude);
         baseResult.locationName = geoInfo.name;
+        baseResult.district = geoInfo.district;
         baseResult.city = geoInfo.city;
+        baseResult.state = geoInfo.state;
         baseResult.country = geoInfo.country;
       }
 
