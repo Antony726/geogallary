@@ -8,6 +8,7 @@ import { exifService } from '../services/exifService.js';
 import { geoService } from '../services/geoService.js';
 import { storageService } from '../services/storageService.js';
 import { googleDriveService } from '../services/googleDriveService.js';
+import { tripDetectionService } from '../services/tripDetectionService.js';
 import { formatBytes, formatDate, showToast, CONFIG } from '../config.js';
 
 export class UploadModal {
@@ -186,7 +187,9 @@ export class UploadModal {
         latitude: meta.latitude,
         longitude: meta.longitude,
         locationName: meta.locationName,
+        district: meta.district,
         city: meta.city,
+        state: meta.state,
         country: meta.country,
         hasGps: meta.hasGps,
         hasExifDate: meta.hasExifDate,
@@ -324,6 +327,13 @@ export class UploadModal {
     
     if (this.progressBox) this.progressBox.style.display = 'none';
     this.close();
+
+    // Auto-detect trips for newly uploaded media
+    try {
+      await tripDetectionService.detectTrips();
+    } catch (e) {
+      console.warn('Trip detection on upload error:', e);
+    }
 
     // Refresh all views
     await this.app.refreshAllViews();
