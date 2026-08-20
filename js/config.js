@@ -28,12 +28,13 @@ export const CONFIG = {
   DEFAULT_GDRIVE_WEBHOOK_URL: '', // Paste your deployed Google Apps Script URL here once, and every user can upload automatically!
 
   DEFAULT_LOCATION: {
-    name: 'Tamil Nadu, India',
+    name: 'Chennai, Tamil Nadu',
+    district: 'Chennai',
     city: 'Chennai',
     state: 'Tamil Nadu',
     country: 'India',
-    lat: 10.8505,
-    lng: 78.6856
+    lat: 13.0827,
+    lng: 80.2707
   },
 
   NOMINATIM_BASE_URL: 'https://nominatim.openstreetmap.org',
@@ -56,6 +57,7 @@ export const SAMPLE_MEMORIES = [
     yearMonth: '2024-05',
     day: '2024-05-10',
     locationName: 'Marina Beach, Chennai, Tamil Nadu',
+    district: 'Chennai',
     city: 'Chennai',
     state: 'Tamil Nadu',
     country: 'India',
@@ -86,6 +88,7 @@ export const SAMPLE_MEMORIES = [
     yearMonth: '2024-04',
     day: '2024-04-18',
     locationName: 'Madurai Meenakshi Temple, Tamil Nadu',
+    district: 'Madurai',
     city: 'Madurai',
     state: 'Tamil Nadu',
     country: 'India',
@@ -116,6 +119,7 @@ export const SAMPLE_MEMORIES = [
     yearMonth: '2024-03',
     day: '2024-03-22',
     locationName: 'Ooty Nilgiris, Tamil Nadu',
+    district: 'Nilgiris',
     city: 'Ooty',
     state: 'Tamil Nadu',
     country: 'India',
@@ -146,6 +150,7 @@ export const SAMPLE_MEMORIES = [
     yearMonth: '2024-02',
     day: '2024-02-14',
     locationName: 'Mahabalipuram Shore Temple, Tamil Nadu',
+    district: 'Chengalpattu',
     city: 'Mahabalipuram',
     state: 'Tamil Nadu',
     country: 'India',
@@ -176,6 +181,7 @@ export const SAMPLE_MEMORIES = [
     yearMonth: '2024-01',
     day: '2024-01-20',
     locationName: 'Brihadeeswarar Temple, Thanjavur, Tamil Nadu',
+    district: 'Thanjavur',
     city: 'Thanjavur',
     state: 'Tamil Nadu',
     country: 'India',
@@ -206,6 +212,7 @@ export const SAMPLE_MEMORIES = [
     yearMonth: '2023-12',
     day: '2023-12-25',
     locationName: 'Vivekananda Rock, Kanyakumari, Tamil Nadu',
+    district: 'Kanyakumari',
     city: 'Kanyakumari',
     state: 'Tamil Nadu',
     country: 'India',
@@ -236,6 +243,7 @@ export const SAMPLE_MEMORIES = [
     yearMonth: '2023-11',
     day: '2023-11-15',
     locationName: 'Pamban Bridge, Rameswaram, Tamil Nadu',
+    district: 'Ramanathapuram',
     city: 'Rameswaram',
     state: 'Tamil Nadu',
     country: 'India',
@@ -266,6 +274,7 @@ export const SAMPLE_MEMORIES = [
     yearMonth: '2023-10',
     day: '2023-10-05',
     locationName: 'Kodaikanal Lake & Hills, Tamil Nadu',
+    district: 'Dindigul',
     city: 'Kodaikanal',
     state: 'Tamil Nadu',
     country: 'India',
@@ -324,19 +333,21 @@ export const FALLBACK_IMAGE_DATA_URI = "data:image/svg+xml,%3Csvg xmlns='http://
 export function resolveMediaUrl(item) {
   if (!item) return FALLBACK_IMAGE_DATA_URI;
 
-  // 1. If active in-memory object URL already created
-  if (item._blobUrl && typeof item._blobUrl === 'string') {
-    return item._blobUrl;
+  // 1. If item has a Blob or File instance, prioritize creating a fresh object URL
+  if (item.fileBlob && (item.fileBlob instanceof Blob || item.fileBlob instanceof File)) {
+    if (!item._blobUrl) {
+      try {
+        item._blobUrl = URL.createObjectURL(item.fileBlob);
+      } catch (e) {
+        console.warn('Could not generate object URL for blob:', e);
+      }
+    }
+    if (item._blobUrl) return item._blobUrl;
   }
 
-  // 2. If item has a Blob or File instance
-  if (item.fileBlob && (item.fileBlob instanceof Blob || item.fileBlob instanceof File)) {
-    try {
-      item._blobUrl = URL.createObjectURL(item.fileBlob);
-      return item._blobUrl;
-    } catch (e) {
-      console.warn('Could not generate object URL for blob:', e);
-    }
+  // 2. If active in-memory object URL already created
+  if (item._blobUrl && typeof item._blobUrl === 'string') {
+    return item._blobUrl;
   }
 
   // 3. If item has an external or data URL
@@ -344,7 +355,7 @@ export function resolveMediaUrl(item) {
     return item.url;
   }
 
-  // 4. If item has a valid external thumbUrl (ignore stale 'blob:' string from past sessions)
+  // 4. If item has a valid external thumbUrl
   if (item.thumbUrl && typeof item.thumbUrl === 'string' && (item.thumbUrl.startsWith('http://') || item.thumbUrl.startsWith('https://') || item.thumbUrl.startsWith('data:'))) {
     return item.thumbUrl;
   }
