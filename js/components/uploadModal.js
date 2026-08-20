@@ -125,6 +125,7 @@ export class UploadModal {
     if (this.btnClearQueue) {
       this.btnClearQueue.addEventListener('click', () => {
         this.queue = [];
+        this.resetFileInputs();
         this.renderQueue();
       });
     }
@@ -137,6 +138,7 @@ export class UploadModal {
 
   open() {
     this.updateDestinationLabel();
+    this.resetFileInputs();
     if (this.modalEl) this.modalEl.style.display = 'flex';
   }
 
@@ -155,8 +157,15 @@ export class UploadModal {
     }
   }
 
+  resetFileInputs() {
+    if (this.fileInputFiles) this.fileInputFiles.value = '';
+    if (this.fileInputCamera) this.fileInputCamera.value = '';
+    if (this.fileInputFolder) this.fileInputFolder.value = '';
+  }
+
   close() {
     if (this.isUploading) return;
+    this.resetFileInputs();
     if (this.modalEl) this.modalEl.style.display = 'none';
   }
 
@@ -324,6 +333,8 @@ export class UploadModal {
 
     showToast(`Successfully organized & backed up ${total} memories!`, 'success');
     this.queue = [];
+    this.renderQueue();
+    this.resetFileInputs();
     this.isUploading = false;
     
     if (this.progressBox) this.progressBox.style.display = 'none';
