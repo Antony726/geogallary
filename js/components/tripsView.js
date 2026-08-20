@@ -32,6 +32,7 @@ export class TripsView {
     this.tripsCountBadge = document.getElementById('trips-count-badge');
     this.btnDetectTrips = document.getElementById('btn-detect-trips');
     this.btnOpenCreateTrip = document.getElementById('btn-open-create-trip');
+    this.inputTripsSearch = document.getElementById('input-trips-search');
 
     // Create Custom Trip Modal Elements
     this.modalCreateTrip = document.getElementById('modal-custom-trip');
@@ -65,6 +66,14 @@ export class TripsView {
   }
 
   attachEvents() {
+    // 0. Trips Search Input
+    if (this.inputTripsSearch) {
+      this.inputTripsSearch.addEventListener('input', (e) => {
+        this.searchQuery = (e.target.value || '').toLowerCase().trim();
+        this.render();
+      });
+    }
+
     // 1. Auto-Detect Button
     if (this.btnDetectTrips) {
       this.btnDetectTrips.addEventListener('click', async () => {
@@ -467,7 +476,17 @@ export class TripsView {
 
   async render() {
     this.allMedia = await storageService.getAllMedia();
-    this.trips = await tripDetectionService.detectTrips();
+    let trips = await tripDetectionService.detectTrips();
+
+    if (this.searchQuery) {
+      trips = trips.filter(t => {
+        const matchName = (t.name || '').toLowerCase().includes(this.searchQuery);
+        const matchLoc = (t.locations || []).join(' ').toLowerCase().includes(this.searchQuery);
+        return matchName || matchLoc;
+      });
+    }
+
+    this.trips = trips;
 
     if (this.tripsCountBadge) {
       this.tripsCountBadge.textContent = `${this.trips.length} Trips`;

@@ -134,6 +134,64 @@ export class UploadModal {
     if (this.btnStartOrganize) {
       this.btnStartOrganize.addEventListener('click', () => this.executeOrganizeAndSave());
     }
+
+    // Batch Actions Toolbar
+    const btnBatchLoc = document.getElementById('btn-batch-fill-location');
+    const btnBatchDate = document.getElementById('btn-batch-fill-date');
+    if (btnBatchLoc) btnBatchLoc.addEventListener('click', () => this.applyBatchLocationToAll());
+    if (btnBatchDate) btnBatchDate.addEventListener('click', () => this.applyBatchDateToAll());
+  }
+
+  applyBatchLocationToAll() {
+    if (this.queue.length === 0) return;
+
+    const validItem = this.queue.find(i => i.hasGps && i.locationName && i.locationName !== 'Unspecified Location');
+    if (validItem) {
+      const { latitude, longitude, locationName, district, city, state, country } = validItem;
+      this.queue.forEach(item => {
+        item.latitude = latitude;
+        item.longitude = longitude;
+        item.locationName = locationName;
+        item.district = district;
+        item.city = city;
+        item.state = state;
+        item.country = country;
+        item.hasGps = true;
+      });
+      this.renderQueue();
+      showToast(`Applied location "${locationName}" to all ${this.queue.length} items!`, 'success');
+    } else {
+      showToast('Pick a location to apply to all items...', 'info');
+      this.openLocationPicker(this.queue[0]);
+    }
+  }
+
+  applyBatchDateToAll() {
+    if (this.queue.length === 0) return;
+
+    const validItem = this.queue.find(i => i.hasExifDate && i.dateTaken);
+    let dateToApply = null;
+
+    if (validItem) {
+      dateToApply = validItem.dateTaken;
+    } else {
+      const userDate = prompt('Enter capture date to apply to all files (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+      if (!userDate) return;
+      const parsed = new Date(userDate);
+      if (isNaN(parsed.getTime())) {
+        showToast('Invalid date format', 'warning');
+        return;
+      }
+      dateToApply = parsed.toISOString();
+    }
+
+    this.queue.forEach(item => {
+      item.dateTaken = dateToApply;
+      item.hasExifDate = true;
+    });
+
+    this.renderQueue();
+    showToast(`Applied date to all ${this.queue.length} items!`, 'success');
   }
 
   open() {
@@ -185,6 +243,7 @@ export class UploadModal {
     showToast(`Processing EXIF metadata for ${mediaFiles.length} files...`, 'info');
     if (this.queueSection) this.queueSection.style.display = 'block';
 
+    const batchItems = [];
     for (const file of mediaFiles) {
       const meta = await exifService.extractMetadata(file);
       
@@ -210,9 +269,39 @@ export class UploadModal {
         thumbUrl: URL.createObjectURL(file)
       };
 
-      this.queue.push(queueItem);
-      this.renderQueue();
+      batchItems.push(queueItem);
     }
+
+    // Auto smart-inherit location & date within the batch
+    const sampleLoc = batchItems.find(i => i.hasGps && i.locationName && i.locationName !== 'Unspecified Location');
+    const sampleDate = batchItems.find(i => i.hasExifDate && i.dateTaken);
+
+    if (sampleLoc) {
+      batchItems.forEach(i => {
+        if (!i.hasGps || i.locationName === 'Unspecified Location') {
+          i.latitude = sampleLoc.latitude;
+          i.longitude = sampleLoc.longitude;
+          i.locationName = sampleLoc.locationName;
+          i.district = sampleLoc.district;
+          i.city = sampleLoc.city;
+          i.state = sampleLoc.state;
+          i.country = sampleLoc.country;
+          i.hasGps = true;
+        }
+      });
+    }
+
+    if (sampleDate) {
+      batchItems.forEach(i => {
+        if (!i.hasExifDate || !i.dateTaken) {
+          i.dateTaken = sampleDate.dateTaken;
+          i.hasExifDate = true;
+        }
+      });
+    }
+
+    this.queue.push(...batchItems);
+    this.renderQueue();
   }
 
   renderQueue() {
@@ -236,23 +325,20 @@ export class UploadModal {
       card.className = 'queue-item-card';
 
       const dateText = item.hasExifDate && item.dateTaken ? formatDate(item.dateTaken) : 'Unspecified Date';
-      const locText = item.hasGps && item.locationName && item.locationName !== 'Unspecified Location' ? item.locationName : 'Unspecified Location';
-      const ym = item.hasExifDate && item.dateTaken ? `${new Date(item.dateTaken).getFullYear()}-${String(new Date(item.dateTaken).getMonth() + 1).padStart(2, '0')}` : 'Unspecified Month';
-      const destPath = `${locText} / ${ym} / ${item.fileName}`;
+      const shortLoc = item.hasGps ? (item.district || item.city || (item.locationName ? item.locationName.split(',')[0].trim() : 'Unspecified Location')) : 'Unspecified Location';
 
       card.innerHTML = `
         <img src="${item.thumbUrl}" class="queue-thumb" alt="${item.fileName}">
         <div class="queue-meta">
-          <span class="queue-filename">${item.fileName} (${formatBytes(item.fileSize)})</span>
+          <div class="queue-filename" title="${item.fileName}">${item.fileName}</div>
           <div class="queue-tags">
             <span class="meta-pill ${item.hasExifDate ? 'resolved' : 'missing'}" id="pill-date-${item.id}" title="Click to edit date">
               <i class="fa-solid fa-calendar"></i> ${dateText}
             </span>
             <span class="meta-pill ${item.hasGps ? 'resolved' : 'missing'}" id="pill-loc-${item.id}" title="Click to edit or pin location">
-              <i class="fa-solid fa-location-dot"></i> ${locText}
+              <i class="fa-solid fa-location-dot"></i> ${shortLoc}
             </span>
           </div>
-          <span class="meta-dest-path"><i class="fa-solid fa-folder-tree"></i> Destination: <code>${destPath}</code></span>
         </div>
         <button class="btn-icon btn-sm text-danger" id="btn-remove-queue-${item.id}" title="Remove file"><i class="fa-solid fa-xmark"></i></button>
       `;
@@ -365,42 +451,47 @@ export class UploadModal {
 
   // ================= Manual Location Picker Map ================= //
 
+  // ================= Manual Location Picker Map ================= //
+
   initManualLocationPicker() {
-    if (!this.btnCloseLocationPicker || !this.locationPickerModal) return;
+    this.locationPickerModal = document.getElementById('modal-manual-location');
+    this.btnCloseLocationPicker = document.getElementById('btn-close-location-picker');
+    this.btnCancelLocationPicker = document.getElementById('btn-cancel-location-picker');
+    this.btnConfirmLocationPicker = document.getElementById('btn-confirm-location-picker');
+    this.inputSearchLocation = document.getElementById('input-search-location');
+    this.btnSearchLocation = document.getElementById('btn-search-location-geocode');
+    this.labelSelectedLocation = document.getElementById('label-selected-location-text');
 
-    this.btnCloseLocationPicker.addEventListener('click', () => {
-      this.locationPickerModal.style.display = 'none';
-    });
+    if (!this.locationPickerModal) return;
 
-    if (this.btnCancelLocationPicker) {
-      this.btnCancelLocationPicker.addEventListener('click', () => {
-        this.locationPickerModal.style.display = 'none';
-      });
-    }
+    const closePicker = () => {
+      if (this.locationPickerModal) this.locationPickerModal.style.display = 'none';
+    };
 
-    if (this.btnSearchLocation && this.inputSearchLocation) {
-      this.btnSearchLocation.addEventListener('click', async () => {
-        const query = this.inputSearchLocation.value.trim();
-        if (!query) return;
-        showToast('Searching place...', 'info');
-        const results = await geoService.searchLocation(query);
-        if (results.length > 0) {
-          const first = results[0];
-          this.setPickerLocation(first.lat, first.lng, first.name, first.city, first.country);
-          if (this.pickerMap) this.pickerMap.flyTo([first.lat, first.lng], 13);
-        } else {
-          showToast('No matching location found', 'warning');
+    if (this.btnCloseLocationPicker) this.btnCloseLocationPicker.addEventListener('click', closePicker);
+    if (this.btnCancelLocationPicker) this.btnCancelLocationPicker.addEventListener('click', closePicker);
+
+    // Search input Enter key
+    if (this.inputSearchLocation) {
+      this.inputSearchLocation.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          this.performLocationSearch();
         }
       });
     }
 
-    // Bind quick 1-tap Tamil Nadu & India chips
-    const quickChips = document.querySelectorAll('.quick-chip');
+    if (this.btnSearchLocation) {
+      this.btnSearchLocation.addEventListener('click', () => this.performLocationSearch());
+    }
+
+    // Quick location chips (.location-chip)
+    const quickChips = document.querySelectorAll('#quick-location-chips-list .location-chip');
     quickChips.forEach((chip) => {
       chip.addEventListener('click', () => {
         quickChips.forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
-        const name = chip.dataset.name;
+        const name = chip.dataset.name || chip.textContent;
         const lat = parseFloat(chip.dataset.lat);
         const lng = parseFloat(chip.dataset.lng);
         const parts = name.split(',');
@@ -415,6 +506,17 @@ export class UploadModal {
 
     if (this.btnConfirmLocationPicker) {
       this.btnConfirmLocationPicker.addEventListener('click', () => {
+        const manualQuery = this.inputSearchLocation ? this.inputSearchLocation.value.trim() : '';
+        if (manualQuery && (!this.selectedPickerLocation || this.selectedPickerLocation.name === 'Click map or chip')) {
+          this.selectedPickerLocation = {
+            lat: 13.0827,
+            lng: 80.2707,
+            name: manualQuery,
+            city: manualQuery.split(',')[0].trim(),
+            country: 'India'
+          };
+        }
+
         if (this.pickerTargetItem && this.selectedPickerLocation) {
           this.pickerTargetItem.latitude = this.selectedPickerLocation.lat;
           this.pickerTargetItem.longitude = this.selectedPickerLocation.lng;
@@ -423,20 +525,65 @@ export class UploadModal {
           this.pickerTargetItem.country = this.selectedPickerLocation.country;
           this.pickerTargetItem.hasGps = true;
           this.renderQueue();
+          showToast(`Location updated to "${this.selectedPickerLocation.name}"`, 'success');
         }
-        this.locationPickerModal.style.display = 'none';
+        closePicker();
       });
+    }
+  }
+
+  async performLocationSearch() {
+    const query = this.inputSearchLocation ? this.inputSearchLocation.value.trim() : '';
+    if (!query) return;
+    showToast('Searching locations...', 'info');
+
+    const resultsContainer = document.getElementById('location-search-results');
+    const results = await geoService.searchLocation(query);
+
+    if (results && results.length > 0) {
+      if (resultsContainer) {
+        resultsContainer.innerHTML = '';
+        resultsContainer.style.display = 'flex';
+        results.slice(0, 5).forEach((item) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'text-left px-3 py-2 text-xs bg-zinc-900 hover:bg-zinc-800 rounded-lg text-white truncate border border-zinc-800 w-full';
+          btn.innerHTML = `<i class="fa-solid fa-location-dot" style="color: var(--accent); margin-right: 6px;"></i> ${item.name}`;
+          btn.onclick = () => {
+            this.setPickerLocation(item.lat, item.lng, item.name, item.city, item.country);
+            if (this.pickerMap) this.pickerMap.flyTo([item.lat, item.lng], 13);
+            resultsContainer.style.display = 'none';
+          };
+          resultsContainer.appendChild(btn);
+        });
+      }
+
+      const first = results[0];
+      this.setPickerLocation(first.lat, first.lng, first.name, first.city, first.country);
+      if (this.pickerMap) this.pickerMap.flyTo([first.lat, first.lng], 13);
+    } else {
+      showToast('Location name captured. Click Confirm to save.', 'info');
+      this.setPickerLocation(13.0827, 80.2707, query, query.split(',')[0].trim(), 'India');
     }
   }
 
   openLocationPicker(item) {
     this.pickerTargetItem = item;
+    if (this.inputSearchLocation) {
+      this.inputSearchLocation.value = (item.locationName && item.locationName !== 'Unspecified Location') ? item.locationName : '';
+    }
+
+    const resultsContainer = document.getElementById('location-search-results');
+    if (resultsContainer) resultsContainer.style.display = 'none';
+
     if (this.locationPickerModal) this.locationPickerModal.style.display = 'flex';
 
     setTimeout(() => {
       if (!this.pickerMap && typeof window.L !== 'undefined') {
-        // Centered on Tamil Nadu, India
-        this.pickerMap = window.L.map('picker-map').setView([10.8505, 78.6856], 7.5);
+        const initialLat = (item && item.latitude) ? item.latitude : 13.0827;
+        const initialLng = (item && item.longitude) ? item.longitude : 80.2707;
+
+        this.pickerMap = window.L.map('picker-map').setView([initialLat, initialLng], 8);
         window.L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
           maxZoom: 18
         }).addTo(this.pickerMap);
@@ -451,14 +598,14 @@ export class UploadModal {
 
       if (this.pickerMap) {
         this.pickerMap.invalidateSize();
-        if (item.latitude && item.longitude) {
+        if (item && item.latitude != null && item.longitude != null) {
           this.setPickerLocation(item.latitude, item.longitude, item.locationName, item.city, item.country);
-          this.pickerMap.setView([item.latitude, item.longitude], 12);
+          this.pickerMap.setView([item.latitude, item.longitude], 13);
         } else {
-          this.pickerMap.setView([10.8505, 78.6856], 7.5);
+          this.pickerMap.setView([13.0827, 80.2707], 7);
         }
       }
-    }, 150);
+    }, 200);
   }
 
   setPickerLocation(lat, lng, name, city, country) {

@@ -10,6 +10,7 @@ import { DashboardView } from './components/dashboardView.js';
 import { TimelineView } from './components/timelineView.js';
 import { MapView } from './components/mapView.js';
 import { TripsView } from './components/tripsView.js';
+import { GalaxyView } from './components/galaxyView.js';
 import { FolderExplorerView } from './components/folderExplorerView.js';
 import { UploadModal } from './components/uploadModal.js';
 import { Lightbox } from './components/lightbox.js';
@@ -35,6 +36,7 @@ class GeoTimelineApp {
     this.timelineView = new TimelineView(this);
     this.mapView = new MapView(this);
     this.tripsView = new TripsView(this);
+    this.galaxyView = new GalaxyView(this);
     this.folderExplorerView = new FolderExplorerView(this);
     this.uploadModal = new UploadModal(this);
     this.lightbox = new Lightbox(this);
@@ -408,6 +410,8 @@ class GeoTimelineApp {
 
     // Update Nav Tab UI
     this.navbar.setActiveTab(viewName);
+    document.body.classList.toggle('view-map-active', viewName === 'map');
+    document.body.classList.toggle('view-galaxy-active', viewName === 'galaxy');
 
     // Toggle View Sections
     const views = document.querySelectorAll('.app-view');
@@ -435,6 +439,8 @@ class GeoTimelineApp {
       await this.tripsView.render();
     } else if (viewName === 'map') {
       await this.mapView.render();
+    } else if (viewName === 'galaxy') {
+      await this.galaxyView.render();
     } else if (viewName === 'folders') {
       await this.folderExplorerView.render();
     }

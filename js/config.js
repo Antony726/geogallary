@@ -6,7 +6,7 @@ export const CONFIG = {
   APP_NAME: 'GeoTimeline Photos',
   VERSION: '1.0.0',
   DB_NAME: 'GeoTimelineDB',
-  DB_VERSION: 2,
+  DB_VERSION: 3,
   
   STORAGE_KEYS: {
     PROVIDER: 'geotimeline_storage_provider', // 'local' | 'gdrive' | 'demo'

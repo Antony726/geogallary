@@ -354,6 +354,11 @@ class StorageService {
   async saveTrip(trip) {
     await this.init();
     return new Promise((resolve, reject) => {
+      if (!this.db || !this.db.objectStoreNames.contains('trips')) {
+        console.warn('Trips objectStore not created in IndexedDB yet');
+        resolve(trip);
+        return;
+      }
       const tx = this.db.transaction(['trips'], 'readwrite');
       const store = tx.objectStore('trips');
       const req = store.put(trip);
@@ -365,7 +370,7 @@ class StorageService {
   async getAllTrips() {
     await this.init();
     return new Promise((resolve) => {
-      if (!this.db.objectStoreNames.contains('trips')) {
+      if (!this.db || !this.db.objectStoreNames.contains('trips')) {
         resolve([]);
         return;
       }
@@ -384,6 +389,10 @@ class StorageService {
   async getTripById(id) {
     await this.init();
     return new Promise((resolve) => {
+      if (!this.db || !this.db.objectStoreNames.contains('trips')) {
+        resolve(null);
+        return;
+      }
       const tx = this.db.transaction(['trips'], 'readonly');
       const store = tx.objectStore('trips');
       const req = store.get(id);
@@ -395,6 +404,10 @@ class StorageService {
   async deleteTrip(id) {
     await this.init();
     return new Promise((resolve, reject) => {
+      if (!this.db || !this.db.objectStoreNames.contains('trips')) {
+        resolve(true);
+        return;
+      }
       const tx = this.db.transaction(['trips'], 'readwrite');
       const store = tx.objectStore('trips');
       const req = store.delete(id);

@@ -1,6 +1,6 @@
 /**
  * Timeline Stream View Component
- * Chronological photo stream grouped by Year -> Month -> Day
+ * Featuring Mode A: Time-Travel Focus View (Default) & Mode B: Continuous Feed Stream
  */
 
 import { storageService } from '../services/storageService.js';
@@ -11,9 +11,18 @@ export class TimelineView {
     this.app = app;
     this.allMedia = [];
     this.filteredMedia = [];
+    this.viewMode = 'focus'; // 'focus' (Time-Travel Focus View) | 'stream' (Continuous Feed)
     this.activeTypeFilter = 'all'; // 'all' | 'image' | 'video'
     this.activeLocationFilter = null;
     this.searchQuery = '';
+
+    this.selectedYear = null;
+    this.selectedMonth = null;
+    this.selectedDay = null;
+
+    this.availableYears = [];
+    this.availableMonths = [];
+    this.availableDays = [];
 
     this.initElements();
     this.attachEvents();
@@ -21,13 +30,52 @@ export class TimelineView {
 
   initElements() {
     this.streamContainer = document.getElementById('timeline-stream-content');
-    this.scrubberList = document.getElementById('timeline-scrubber-list');
     this.itemCounter = document.getElementById('timeline-item-count');
     this.filterChips = document.querySelectorAll('.timeline-toolbar .filter-chip');
     this.btnExportZip = document.getElementById('btn-export-timeline-zip');
+
+    // View Mode Toggle Buttons
+    this.btnModeFocus = document.getElementById('btn-mode-focus');
+    this.btnModeStream = document.getElementById('btn-mode-stream');
+
+    // Navigator Reels
+    this.reelYears = document.getElementById('time-reel-years');
+    this.reelMonths = document.getElementById('time-reel-months');
+    this.reelDays = document.getElementById('time-reel-days');
+
+    // Capsule Banner
+    this.capsuleBanner = document.getElementById('memory-capsule-banner');
+    this.labelCapsuleTitle = document.getElementById('label-capsule-title');
+    this.labelCapsuleSubtitle = document.getElementById('label-capsule-subtitle');
+    this.btnCapsulePrev = document.getElementById('btn-capsule-prev');
+    this.btnCapsuleNext = document.getElementById('btn-capsule-next');
+    this.labelCapsulePrevText = document.getElementById('label-capsule-prev-text');
+    this.labelCapsuleNextText = document.getElementById('label-capsule-next-text');
   }
 
   attachEvents() {
+    // Mode Switcher
+    if (this.btnModeFocus) {
+      this.btnModeFocus.addEventListener('click', () => {
+        this.viewMode = 'focus';
+        if (this.btnModeFocus) this.btnModeFocus.classList.add('active');
+        if (this.btnModeStream) this.btnModeStream.classList.remove('active');
+        if (this.capsuleBanner) this.capsuleBanner.style.display = 'flex';
+        this.renderStream();
+      });
+    }
+
+    if (this.btnModeStream) {
+      this.btnModeStream.addEventListener('click', () => {
+        this.viewMode = 'stream';
+        if (this.btnModeStream) this.btnModeStream.classList.add('active');
+        if (this.btnModeFocus) this.btnModeFocus.classList.remove('active');
+        if (this.capsuleBanner) this.capsuleBanner.style.display = 'none';
+        this.renderStream();
+      });
+    }
+
+    // Filter Chips
     this.filterChips.forEach((chip) => {
       chip.addEventListener('click', () => {
         this.filterChips.forEach(c => c.classList.remove('active'));
@@ -37,6 +85,15 @@ export class TimelineView {
       });
     });
 
+    // Step Prev/Next on Capsule Banner
+    if (this.btnCapsulePrev) {
+      this.btnCapsulePrev.addEventListener('click', () => this.stepPeriod(-1));
+    }
+    if (this.btnCapsuleNext) {
+      this.btnCapsuleNext.addEventListener('click', () => this.stepPeriod(1));
+    }
+
+    // Export ZIP
     if (this.btnExportZip) {
       this.btnExportZip.addEventListener('click', async () => {
         try {
@@ -86,21 +143,10 @@ export class TimelineView {
 
   applyFiltersAndRender() {
     this.filteredMedia = this.allMedia.filter((item) => {
-      // Scoped trip filter
-      if (this.activeTripPhotoIds && !this.activeTripPhotoIds.has(item.id)) {
-        return false;
-      }
-      // Media type filter
-      if (this.activeTypeFilter !== 'all' && item.mediaType !== this.activeTypeFilter) {
-        return false;
-      }
+      if (this.activeTripPhotoIds && !this.activeTripPhotoIds.has(item.id)) return false;
+      if (this.activeTypeFilter !== 'all' && item.mediaType !== this.activeTypeFilter) return false;
+      if (this.activeLocationFilter && item.locationName !== this.activeLocationFilter) return false;
 
-      // Location filter
-      if (this.activeLocationFilter && item.locationName !== this.activeLocationFilter) {
-        return false;
-      }
-
-      // Search Query filter
       if (this.searchQuery) {
         const matchName = (item.fileName || '').toLowerCase().includes(this.searchQuery);
         const matchLoc = (item.locationName || '').toLowerCase().includes(this.searchQuery);
@@ -113,7 +159,6 @@ export class TimelineView {
           return false;
         }
       }
-
       return true;
     });
 
@@ -121,20 +166,196 @@ export class TimelineView {
       this.itemCounter.textContent = `${this.filteredMedia.length} memories`;
     }
 
+    this.buildTimeIndexTree();
+    this.renderTimeTravelNavigator();
     this.renderStream();
-    this.renderScrubber();
+  }
+
+  buildTimeIndexTree() {
+    const yearMap = {};
+    this.filteredMedia.forEach((item) => {
+      const y = item.year || 'Unspecified';
+      const ym = item.yearMonth || 'Unspecified';
+      const d = item.day || (item.dateTaken ? item.dateTaken.split('T')[0] : 'Unspecified Date');
+
+      if (!yearMap[y]) yearMap[y] = { count: 0, months: {} };
+      yearMap[y].count++;
+
+      if (!yearMap[y].months[ym]) yearMap[y].months[ym] = { count: 0, days: {} };
+      yearMap[y].months[ym].count++;
+
+      if (!yearMap[y].months[ym].days[d]) yearMap[y].months[ym].days[d] = { count: 0, location: item.locationName };
+      yearMap[y].months[ym].days[d].count++;
+    });
+
+    this.timeTree = yearMap;
+    this.availableYears = Object.keys(yearMap).sort().reverse();
+
+    // Default select latest available Year/Month/Day if not explicitly selected
+    if (!this.selectedYear || !yearMap[this.selectedYear]) {
+      this.selectedYear = this.availableYears[0] || null;
+    }
+
+    if (this.selectedYear && yearMap[this.selectedYear]) {
+      this.availableMonths = Object.keys(yearMap[this.selectedYear].months).sort().reverse();
+      if (!this.selectedMonth || !yearMap[this.selectedYear].months[this.selectedMonth]) {
+        this.selectedMonth = this.availableMonths[0] || null;
+      }
+    } else {
+      this.availableMonths = [];
+      this.selectedMonth = null;
+    }
+
+    if (this.selectedYear && this.selectedMonth && yearMap[this.selectedYear]?.months[this.selectedMonth]) {
+      this.availableDays = Object.keys(yearMap[this.selectedYear].months[this.selectedMonth].days).sort().reverse();
+      if (!this.selectedDay || !yearMap[this.selectedYear].months[this.selectedMonth].days[this.selectedDay]) {
+        this.selectedDay = this.availableDays[0] || null;
+      }
+    } else {
+      this.availableDays = [];
+      this.selectedDay = null;
+    }
+  }
+
+  renderTimeTravelNavigator() {
+    if (!this.reelYears || !this.reelMonths || !this.reelDays) return;
+
+    // 1. Render Years Track
+    this.reelYears.innerHTML = '';
+    const allPill = document.createElement('button');
+    allPill.className = `year-pill ${!this.selectedYear ? 'active' : ''}`;
+    allPill.innerHTML = `<span>All Time</span> <span class="year-count">${this.filteredMedia.length}</span>`;
+    allPill.onclick = () => {
+      this.selectedYear = null;
+      this.selectedMonth = null;
+      this.selectedDay = null;
+      this.buildTimeIndexTree();
+      this.renderTimeTravelNavigator();
+      this.renderStream();
+    };
+    this.reelYears.appendChild(allPill);
+
+    this.availableYears.forEach(y => {
+      const yPill = document.createElement('button');
+      yPill.className = `year-pill ${this.selectedYear === y ? 'active' : ''}`;
+      yPill.innerHTML = `<span>${y}</span> <span class="year-count">${this.timeTree[y].count}</span>`;
+      yPill.onclick = () => {
+        this.selectedYear = y;
+        this.selectedMonth = null;
+        this.selectedDay = null;
+        this.buildTimeIndexTree();
+        this.renderTimeTravelNavigator();
+        this.renderStream();
+      };
+      this.reelYears.appendChild(yPill);
+    });
+
+    // 2. Render Months Track
+    this.reelMonths.innerHTML = '';
+    if (this.selectedYear && this.availableMonths.length > 0) {
+      this.availableMonths.forEach(ym => {
+        const mCard = document.createElement('button');
+        mCard.className = `month-card ${this.selectedMonth === ym ? 'active' : ''}`;
+
+        const monthNum = ym.includes('-') ? ym.split('-')[1] : ym;
+        const monthName = !isNaN(parseInt(monthNum)) ? new Date(`${this.selectedYear}-${monthNum}-01`).toLocaleString('default', { month: 'short' }) : ym;
+        const count = this.timeTree[this.selectedYear].months[ym].count;
+
+        mCard.innerHTML = `
+          <div class="month-name">${monthName} ${this.selectedYear}</div>
+          <div class="month-count">${count} memories</div>
+        `;
+        mCard.onclick = () => {
+          this.selectedMonth = ym;
+          this.selectedDay = null;
+          this.buildTimeIndexTree();
+          this.renderTimeTravelNavigator();
+          this.renderStream();
+        };
+        this.reelMonths.appendChild(mCard);
+      });
+    }
+
+    // 3. Render Days Track
+    this.reelDays.innerHTML = '';
+    if (this.selectedMonth && this.availableDays.length > 0) {
+      this.availableDays.forEach(d => {
+        const dPill = document.createElement('button');
+        dPill.className = `day-pill ${this.selectedDay === d ? 'active' : ''}`;
+        const dayInfo = this.timeTree[this.selectedYear].months[this.selectedMonth].days[d];
+        const dayFormatted = d !== 'Unspecified Date' ? formatDate(d) : 'Unspecified Date';
+
+        dPill.innerHTML = `
+          <span>${dayFormatted}</span>
+          <span class="day-count">(${dayInfo.count})</span>
+        `;
+        dPill.onclick = () => {
+          this.selectedDay = d;
+          this.renderTimeTravelNavigator();
+          this.renderStream();
+        };
+        this.reelDays.appendChild(dPill);
+      });
+    }
+  }
+
+  stepPeriod(direction) {
+    if (this.availableDays.length > 0 && this.selectedDay) {
+      const idx = this.availableDays.indexOf(this.selectedDay);
+      const newIdx = idx - direction; // Reverse order (newest first)
+      if (newIdx >= 0 && newIdx < this.availableDays.length) {
+        this.selectedDay = this.availableDays[newIdx];
+        this.renderTimeTravelNavigator();
+        this.renderStream();
+      } else {
+        showToast('Reached end of available dates in this month', 'info');
+      }
+    }
   }
 
   renderStream() {
     if (!this.streamContainer) return;
     this.streamContainer.innerHTML = '';
 
-    if (this.filteredMedia.length === 0) {
+    let displayMedia = this.filteredMedia;
+
+    // In Focus Mode, filter media to selected period only
+    if (this.viewMode === 'focus') {
+      if (this.selectedDay) {
+        displayMedia = this.filteredMedia.filter(m => (m.day || m.dateTaken?.split('T')[0]) === this.selectedDay);
+      } else if (this.selectedMonth) {
+        displayMedia = this.filteredMedia.filter(m => m.yearMonth === this.selectedMonth);
+      } else if (this.selectedYear) {
+        displayMedia = this.filteredMedia.filter(m => m.year === this.selectedYear);
+      }
+
+      // Update Memory Capsule Banner Info
+      if (this.capsuleBanner) this.capsuleBanner.style.display = 'flex';
+      if (this.labelCapsuleTitle) {
+        if (this.selectedDay) {
+          const loc = displayMedia[0]?.locationName || '';
+          this.labelCapsuleTitle.textContent = `${formatDate(this.selectedDay)} ${loc ? '• ' + loc : ''}`;
+        } else if (this.selectedMonth) {
+          this.labelCapsuleTitle.textContent = `Memory Capsule: ${this.selectedMonth}`;
+        } else if (this.selectedYear) {
+          this.labelCapsuleTitle.textContent = `Year Capsule: ${this.selectedYear}`;
+        } else {
+          this.labelCapsuleTitle.textContent = `All Time Memories Archive`;
+        }
+      }
+      if (this.labelCapsuleSubtitle) {
+        this.labelCapsuleSubtitle.textContent = `Showing ${displayMedia.length} memories in Time-Travel Focus Mode`;
+      }
+    } else {
+      if (this.capsuleBanner) this.capsuleBanner.style.display = 'none';
+    }
+
+    if (displayMedia.length === 0) {
       this.streamContainer.innerHTML = `
         <div style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
           <i class="fa-solid fa-images" style="font-size: 3rem; margin-bottom: 12px; opacity: 0.4;"></i>
-          <h3>No media matches current filter</h3>
-          <p style="font-size: 0.85rem; margin-top: 6px;">Try adjusting filters or uploading new photos.</p>
+          <h3>No media in this selected timeline period</h3>
+          <p style="font-size: 0.85rem; margin-top: 6px;">Pick another date on the top navigator reel or switch to Full Stream.</p>
         </div>
       `;
       return;
@@ -142,8 +363,8 @@ export class TimelineView {
 
     // Group media by Date (YYYY-MM-DD)
     const dayGroups = {};
-    this.filteredMedia.forEach((item) => {
-      const dayKey = item.day || (item.dateTaken ? item.dateTaken.split('T')[0] : 'Unknown Date');
+    displayMedia.forEach((item) => {
+      const dayKey = item.day || (item.dateTaken ? item.dateTaken.split('T')[0] : 'Unspecified Date');
       if (!dayGroups[dayKey]) {
         dayGroups[dayKey] = {
           dateStr: dayKey,
@@ -187,8 +408,8 @@ export class TimelineView {
         `;
 
         card.addEventListener('click', () => {
-          const indexInGlobal = this.filteredMedia.indexOf(item);
-          this.app.lightbox.open(this.filteredMedia, indexInGlobal);
+          const indexInGlobal = displayMedia.indexOf(item);
+          this.app.lightbox.open(displayMedia, indexInGlobal);
         });
 
         gridEl.appendChild(card);
@@ -197,48 +418,6 @@ export class TimelineView {
       groupEl.appendChild(dateHeader);
       groupEl.appendChild(gridEl);
       this.streamContainer.appendChild(groupEl);
-    });
-  }
-
-  renderScrubber() {
-    if (!this.scrubberList) return;
-    this.scrubberList.innerHTML = '';
-
-    const years = {};
-    this.filteredMedia.forEach((item) => {
-      const y = item.year || 'Unknown';
-      const ym = item.yearMonth || 'Unknown';
-      if (!years[y]) years[y] = new Set();
-      years[y].add(ym);
-    });
-
-    Object.keys(years).sort().reverse().forEach((year) => {
-      const yearHeader = document.createElement('div');
-      yearHeader.className = 'scrubber-year';
-      yearHeader.textContent = year;
-      this.scrubberList.appendChild(yearHeader);
-
-      Array.from(years[year]).sort().reverse().forEach((ym) => {
-        const monthLink = document.createElement('span');
-        monthLink.className = 'scrubber-month';
-        
-        const monthNum = ym.includes('-') ? ym.split('-')[1] : ym;
-        const monthName = new Date(`${year}-${monthNum}-01`).toLocaleString('default', { month: 'long' });
-        
-        monthLink.textContent = monthName || ym;
-        monthLink.addEventListener('click', () => {
-          // Scroll to the first day of that month
-          const targetDay = this.filteredMedia.find(m => m.yearMonth === ym);
-          if (targetDay) {
-            const el = document.getElementById(`timeline-day-${targetDay.day}`);
-            if (el) {
-              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-          }
-        });
-
-        this.scrubberList.appendChild(monthLink);
-      });
     });
   }
 }

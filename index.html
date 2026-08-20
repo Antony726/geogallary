@@ -89,6 +89,10 @@
               <iconify-icon icon="lucide:map-pin" class="text-sm"></iconify-icon>
               <span>World Map</span>
             </button>
+            <button class="nav-tab" data-view="galaxy" id="tab-galaxy">
+              <iconify-icon icon="lucide:sparkles" class="text-sm text-amber-400"></iconify-icon>
+              <span>Galaxy</span>
+            </button>
             <button class="nav-tab" data-view="folders" id="tab-folders">
               <iconify-icon icon="lucide:folder-tree" class="text-sm"></iconify-icon>
               <span>Drive Explorer</span>
@@ -134,6 +138,11 @@
           <!-- Quick User Guide / Help -->
           <button class="btn-icon" id="btn-open-guide" title="How to Use / Feature Guide">
             <iconify-icon icon="lucide:book-open"></iconify-icon>
+          </button>
+
+          <!-- Memory Galaxy Launcher -->
+          <button class="btn-icon text-amber-400 nav-tab" id="btn-header-galaxy" title="Memory Galaxy View" data-view="galaxy">
+            <iconify-icon icon="lucide:sparkles"></iconify-icon>
           </button>
 
           <!-- Storage & App Settings -->
@@ -417,44 +426,86 @@
 
       <!-- ================= 2. TIMELINE VIEW ================= -->
       <section id="view-timeline" class="app-view">
-        <div class="timeline-layout">
+        <div class="timeline-container max-w-7xl mx-auto px-4 py-8">
           
-          <!-- Sticky Timeline Scrubber Sidebar -->
-          <aside class="timeline-sidebar">
-            <div class="timeline-nav-header font-serif">
-              <iconify-icon icon="lucide:clock"></iconify-icon>
-              <span>Time Jump</span>
+          <!-- Timeline Master Toolbar & Mode Switcher -->
+          <div class="timeline-toolbar flex flex-wrap justify-between items-center gap-4 mb-6">
+            <div class="toolbar-left flex items-center gap-3">
+              <h2 class="view-heading font-serif text-2xl text-white">Timeline Stream</h2>
+              <span class="timeline-counter-badge font-mono text-xs text-zinc-400 bg-zinc-800 px-3 py-1 rounded-full" id="timeline-item-count">0 memories</span>
             </div>
-            <div class="timeline-scrubber" id="timeline-scrubber-list">
-              <!-- Dynamically populated with Year & Month links -->
-            </div>
-          </aside>
 
-          <!-- Main Chronological Stream -->
-          <div class="timeline-stream-container">
-            <div class="timeline-toolbar">
-              <div class="toolbar-left flex items-center">
-                <h2 class="view-heading font-serif">Timeline Stream</h2>
-                <span class="timeline-counter-badge" id="timeline-item-count">0 items</span>
-              </div>
-              <div class="toolbar-right">
-                <div class="filter-group">
-                  <button class="filter-chip active" data-type="all">All Media</button>
-                  <button class="filter-chip" data-type="image">Photos</button>
-                  <button class="filter-chip" data-type="video">Videos</button>
-                </div>
-                <button class="btn btn-secondary btn-sm" id="btn-export-timeline-zip" title="Export current view as organized ZIP">
-                  <iconify-icon icon="lucide:download"></iconify-icon>
-                  <span>Download ZIP</span>
+            <div class="toolbar-right flex items-center gap-3 flex-wrap">
+              <!-- View Mode Toggle -->
+              <div class="view-mode-toggle bg-black/40 border border-zinc-800 p-1 rounded-full flex gap-1">
+                <button class="toggle-mode-btn active" id="btn-mode-focus" type="button" title="Time-Travel Focus View: Pick a date and view only that period">
+                  <iconify-icon icon="lucide:zap" class="text-amber-400 mr-1"></iconify-icon>
+                  <span>Time-Travel Focus</span>
+                </button>
+                <button class="toggle-mode-btn" id="btn-mode-stream" type="button" title="Continuous Feed: Scroll through all memories">
+                  <iconify-icon icon="lucide:layers" class="text-sky-400 mr-1"></iconify-icon>
+                  <span>Full Stream</span>
                 </button>
               </div>
-            </div>
 
-            <!-- Dynamic Stream Container -->
-            <div class="timeline-stream" id="timeline-stream-content">
-              <!-- Rendered dynamically grouped by Year -> Month -> Day -->
+              <!-- Media Type Filter -->
+              <div class="filter-group bg-black/40 border border-zinc-800 p-1 rounded-full flex gap-1">
+                <button class="filter-chip active" data-type="all">All</button>
+                <button class="filter-chip" data-type="image">Photos</button>
+                <button class="filter-chip" data-type="video">Videos</button>
+              </div>
+
+              <button class="btn btn-secondary btn-sm" id="btn-export-timeline-zip" title="Export current view as organized ZIP">
+                <iconify-icon icon="lucide:download"></iconify-icon>
+                <span>Export ZIP</span>
+              </button>
             </div>
           </div>
+
+          <!-- Creative Interactive Time-Travel Navigator Reel -->
+          <div class="time-travel-reel-card mb-6" id="time-travel-navigator">
+            <!-- Year Segments Reel -->
+            <div class="time-reel-years flex gap-2 overflow-x-auto pb-2 scrollbar-none" id="time-reel-years">
+              <!-- Dynamically populated year pills -->
+            </div>
+
+            <!-- Month Cards Reel -->
+            <div class="time-reel-months flex gap-3 overflow-x-auto py-2 scrollbar-none" id="time-reel-months">
+              <!-- Dynamically populated month cards -->
+            </div>
+
+            <!-- Day Chips Track -->
+            <div class="time-reel-days flex gap-2 overflow-x-auto pt-2 scrollbar-none" id="time-reel-days">
+              <!-- Dynamically populated day pills -->
+            </div>
+          </div>
+
+          <!-- Memory Capsule Banner (Focus Mode Active Period Header) -->
+          <div class="memory-capsule-banner mb-6" id="memory-capsule-banner">
+            <button class="capsule-nav-btn prev" id="btn-capsule-prev" title="Previous period">
+              <iconify-icon icon="lucide:chevron-left"></iconify-icon>
+              <span>Previous</span>
+            </button>
+
+            <div class="capsule-info-center text-center">
+              <div class="capsule-badge inline-flex items-center text-xs text-amber-400 font-mono mb-1">
+                <iconify-icon icon="lucide:compass" class="mr-1"></iconify-icon> Memory Capsule
+              </div>
+              <h3 class="capsule-title font-serif text-xl text-white" id="label-capsule-title">Selecting Timeline Period...</h3>
+              <p class="capsule-subtitle text-xs text-zinc-400" id="label-capsule-subtitle">Pick a Year, Month or Day above to jump to that memory capsule</p>
+            </div>
+
+            <button class="capsule-nav-btn next" id="btn-capsule-next" title="Next period">
+              <span>Next</span>
+              <iconify-icon icon="lucide:chevron-right"></iconify-icon>
+            </button>
+          </div>
+
+          <!-- Dynamic Stream Container -->
+          <div class="timeline-stream-container w-full" id="timeline-stream-content">
+            <!-- Rendered dynamically -->
+          </div>
+
         </div>
       </section>
 
@@ -506,11 +557,18 @@
       <!-- ================= 4. TRIPS VIEW (Feature 2) ================= -->
       <section id="view-trips" class="app-view">
         <div class="trips-view-container">
-          <div class="trips-toolbar">
+          <div class="trips-toolbar flex flex-wrap justify-between items-center gap-4 mb-6">
             <div class="flex items-center gap-3">
-              <h2 class="view-heading font-serif">Journeys & Trips</h2>
-              <span class="badge badge-accent" id="trips-count-badge">0 Trips</span>
+              <h2 class="view-heading font-serif text-2xl text-white">Journeys & Trips</h2>
+              <span class="badge badge-accent font-mono text-xs" id="trips-count-badge">0 Trips</span>
             </div>
+
+            <!-- Sleek Trip Search & Filter Bar -->
+            <div class="trips-search-bar flex items-center bg-black/50 border border-zinc-800 rounded-full px-4 py-2 flex-1 max-w-xs shadow-inner">
+              <iconify-icon icon="lucide:search" class="text-zinc-400 mr-2 text-sm"></iconify-icon>
+              <input type="text" id="input-trips-search" placeholder="Search journeys, places..." class="bg-transparent border-none text-xs text-white placeholder-zinc-500 focus:outline-none w-full font-sans">
+            </div>
+
             <div class="flex items-center gap-2 flex-wrap">
               <button class="btn btn-primary btn-sm" id="btn-open-create-trip" title="Create a custom trip manually with uploaded photos and videos">
                 <iconify-icon icon="lucide:plus"></iconify-icon>
@@ -605,6 +663,39 @@
             </div>
           </div>
 
+      <!-- ================= 6. MEMORY GALAXY VIEW ================= -->
+      <section id="view-galaxy" class="app-view">
+        <div class="galaxy-view-container relative w-full h-full">
+          <!-- Canvas Universe Element -->
+          <canvas id="galaxy-canvas" class="galaxy-canvas"></canvas>
+
+          <!-- Floating Grouping Control Toolbar -->
+          <div class="galaxy-toolbar flex items-center gap-2 bg-black/70 backdrop-blur-md border border-zinc-800 p-1.5 rounded-full shadow-2xl">
+            <span class="text-xs text-zinc-400 font-mono px-3">Cluster By:</span>
+            <div class="galaxy-group-switcher flex gap-1" id="galaxy-group-switcher">
+              <button class="galaxy-pill active" data-group="place">📍 Place</button>
+              <button class="galaxy-pill" data-group="trip">🧳 Journey</button>
+              <button class="galaxy-pill" data-group="time">🕒 Time</button>
+            </div>
+            <button class="btn btn-secondary btn-sm rounded-full ml-2" id="btn-galaxy-reset" title="Reset View Camera">
+              <iconify-icon icon="lucide:rotate-ccw"></iconify-icon>
+              <span>Reset</span>
+            </button>
+          </div>
+
+          <!-- Bottom Info Badge -->
+          <div class="galaxy-info-badge bg-black/70 backdrop-blur-md border border-zinc-800/80 px-4 py-2 rounded-2xl flex items-center gap-3">
+            <iconify-icon icon="lucide:orbit" class="text-amber-400 text-xl"></iconify-icon>
+            <div>
+              <div class="text-xs text-white font-semibold">Memory Galaxy</div>
+              <div class="text-[11px] text-zinc-400 font-mono">
+                <span id="galaxy-total-orbs">0 stars</span> • <span id="galaxy-total-clusters">0 clusters</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bloom Photo Preview Overlay Card -->
+          <div class="galaxy-bloom-card" id="galaxy-bloom-card" style="display: none;"></div>
         </div>
       </section>
 
@@ -833,12 +924,25 @@
           </div>
 
           <!-- Queue Container -->
-          <div class="upload-queue-container mt-6" id="upload-queue-section" style="display: none;">
-            <div class="flex justify-between items-center mb-3">
-              <h4 class="font-serif text-lg text-white">Organization Preview (<span id="queue-count">0</span> items)</h4>
-              <button class="btn-text text-red-400" id="btn-clear-queue">Clear All</button>
+          <div class="upload-queue-container mt-4 w-full" id="upload-queue-section" style="display: none;">
+            <div class="queue-header-row flex justify-between items-center mb-2 w-full">
+              <h4 class="font-serif text-base text-white">Organization Preview (<span id="queue-count">0</span> items)</h4>
+              <button class="btn-text text-xs text-red-400" id="btn-clear-queue">Clear All</button>
             </div>
-            <div class="queue-items-list flex flex-col gap-3 max-h-60 overflow-y-auto" id="queue-items-list">
+
+            <!-- Quick Batch Actions Toolbar -->
+            <div class="batch-toolbar flex flex-wrap gap-2 mb-2 w-full" id="batch-toolbar">
+              <button class="batch-action-btn" type="button" id="btn-batch-fill-location" title="Apply location to all items in batch">
+                <i class="fa-solid fa-location-dot" style="color: #FF4500;"></i>
+                <span>Fill Location to All</span>
+              </button>
+              <button class="batch-action-btn" type="button" id="btn-batch-fill-date" title="Apply date to all items in batch">
+                <i class="fa-solid fa-calendar" style="color: #38bdf8;"></i>
+                <span>Fill Date to All</span>
+              </button>
+            </div>
+
+            <div class="queue-items-list flex flex-col gap-2 max-h-52 overflow-y-auto w-full" id="queue-items-list">
               <!-- Dynamically populated -->
             </div>
           </div>
@@ -901,12 +1005,14 @@
           <button class="modal-close-btn" id="btn-close-location-picker"><iconify-icon icon="lucide:x"></iconify-icon></button>
         </div>
         <div class="modal-body">
-          <div class="flex gap-2 mb-4">
+          <div class="flex gap-2 mb-3">
             <input type="text" id="input-search-location" placeholder="Search city or landmark (e.g. Madurai, Ooty)..." class="flex-1 bg-black border border-zinc-700 rounded-full px-4 py-2 text-sm text-white">
             <button class="btn btn-secondary btn-sm" id="btn-search-location-geocode">Search</button>
           </div>
 
-          <div class="flex flex-wrap gap-2 mb-4" id="quick-location-chips-list">
+          <div class="flex flex-col gap-1 mb-3 max-h-40 overflow-y-auto" id="location-search-results" style="display: none;"></div>
+
+          <div class="flex flex-wrap gap-2 mb-3" id="quick-location-chips-list">
             <button class="location-chip" type="button" data-name="Marina Beach, Chennai, Tamil Nadu" data-lat="13.0499" data-lng="80.2824">Chennai</button>
             <button class="location-chip" type="button" data-name="Madurai Meenakshi Temple, Tamil Nadu" data-lat="9.9195" data-lng="78.1193">Madurai</button>
             <button class="location-chip" type="button" data-name="Ooty Nilgiris, Tamil Nadu" data-lat="11.4102" data-lng="76.6950">Ooty</button>
@@ -919,6 +1025,16 @@
             Selected: <strong id="label-selected-location-text" class="text-white">Click map or chip</strong>
           </div>
         </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btn-cancel-location-picker">Cancel</button>
+          <button class="btn btn-primary" id="btn-confirm-location-picker">
+            <iconify-icon icon="lucide:check"></iconify-icon>
+            <span>Confirm & Set Location</span>
+          </button>
+        </div>
+      </div>
+    </div>
     <!-- 5. CREATE CUSTOM TRIP & UPLOAD MEDIA MODAL -->
     <div class="modal-backdrop" id="modal-custom-trip" style="display: none;">
       <div class="modal-card modal-lg">
