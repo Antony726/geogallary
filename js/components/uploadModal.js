@@ -221,9 +221,10 @@ export class UploadModal {
       const card = document.createElement('div');
       card.className = 'queue-item-card';
 
-      const d = new Date(item.dateTaken);
-      const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const destPath = `${item.locationName} / ${ym} / ${item.fileName}`;
+      const dateText = item.hasExifDate && item.dateTaken ? formatDate(item.dateTaken) : 'Unspecified Date';
+      const locText = item.hasGps && item.locationName && item.locationName !== 'Unspecified Location' ? item.locationName : 'Unspecified Location';
+      const ym = item.hasExifDate && item.dateTaken ? `${new Date(item.dateTaken).getFullYear()}-${String(new Date(item.dateTaken).getMonth() + 1).padStart(2, '0')}` : 'Unspecified Month';
+      const destPath = `${locText} / ${ym} / ${item.fileName}`;
 
       card.innerHTML = `
         <img src="${item.thumbUrl}" class="queue-thumb" alt="${item.fileName}">
@@ -231,10 +232,10 @@ export class UploadModal {
           <span class="queue-filename">${item.fileName} (${formatBytes(item.fileSize)})</span>
           <div class="queue-tags">
             <span class="meta-pill ${item.hasExifDate ? 'resolved' : 'missing'}" id="pill-date-${item.id}" title="Click to edit date">
-              <i class="fa-solid fa-calendar"></i> ${formatDate(item.dateTaken)}
+              <i class="fa-solid fa-calendar"></i> ${dateText}
             </span>
             <span class="meta-pill ${item.hasGps ? 'resolved' : 'missing'}" id="pill-loc-${item.id}" title="Click to edit or pin location">
-              <i class="fa-solid fa-location-dot"></i> ${item.locationName}
+              <i class="fa-solid fa-location-dot"></i> ${locText}
             </span>
           </div>
           <span class="meta-dest-path"><i class="fa-solid fa-folder-tree"></i> Destination: <code>${destPath}</code></span>

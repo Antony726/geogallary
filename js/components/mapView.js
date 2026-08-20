@@ -389,7 +389,8 @@ export class MapView {
 
     const placeMap = {};
     this.allMedia.forEach((item) => {
-      const loc = item.locationName || 'Unspecified Location';
+      const loc = item.locationName;
+      if (!loc || loc === 'Unspecified Location' || item.latitude == null || item.longitude == null) return;
       if (!placeMap[loc]) {
         placeMap[loc] = {
           name: loc,

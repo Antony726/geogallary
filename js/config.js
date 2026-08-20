@@ -28,13 +28,13 @@ export const CONFIG = {
   DEFAULT_GDRIVE_WEBHOOK_URL: '', // Paste your deployed Google Apps Script URL here once, and every user can upload automatically!
 
   DEFAULT_LOCATION: {
-    name: 'Chennai, Tamil Nadu',
-    district: 'Chennai',
-    city: 'Chennai',
-    state: 'Tamil Nadu',
-    country: 'India',
-    lat: 13.0827,
-    lng: 80.2707
+    name: 'Unspecified Location',
+    district: '',
+    city: '',
+    state: '',
+    country: '',
+    lat: null,
+    lng: null
   },
 
   NOMINATIM_BASE_URL: 'https://nominatim.openstreetmap.org',
@@ -312,9 +312,9 @@ export function formatBytes(bytes, decimals = 1) {
  * Format date to human friendly string
  */
 export function formatDate(isoString) {
-  if (!isoString) return 'Unknown Date';
+  if (!isoString || isoString === 'Unspecified Date' || isoString === 'Unknown Date') return 'Unspecified Date';
   const d = new Date(isoString);
-  if (isNaN(d.getTime())) return 'Unknown Date';
+  if (isNaN(d.getTime())) return 'Unspecified Date';
   return d.toLocaleDateString(undefined, {
     year: 'numeric',
     month: 'short',

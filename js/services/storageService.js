@@ -80,17 +80,24 @@ class StorageService {
     await this.init();
 
     // Ensure standard date hierarchy fields
-    const d = new Date(item.dateTaken || Date.now());
-    const yyyy = d.getFullYear().toString();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    
-    item.year = yyyy;
-    item.yearMonth = `${yyyy}-${mm}`;
-    item.day = `${yyyy}-${mm}-${dd}`;
-    
+    if (item.dateTaken) {
+      const d = new Date(item.dateTaken);
+      if (!isNaN(d.getTime())) {
+        const yyyy = d.getFullYear().toString();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        item.year = yyyy;
+        item.yearMonth = `${yyyy}-${mm}`;
+        item.day = `${yyyy}-${mm}-${dd}`;
+      }
+    }
+    if (!item.year) item.year = 'Unspecified Year';
+    if (!item.yearMonth) item.yearMonth = 'Unspecified Month';
+    if (!item.day) item.day = 'Unspecified Date';
+    if (!item.locationName) item.locationName = 'Unspecified Location';
+
     // Sanitize folder names for file system compatibility
-    const safeLocation = (item.locationName || 'Unspecified Location').replace(/[<>:"/\\|?*]/g, '_').trim();
+    const safeLocation = item.locationName.replace(/[<>:"/\\|?*]/g, '_').trim();
     item.storagePath = `${safeLocation}/${item.yearMonth}/${item.fileName}`;
 
     // If local directory handle is active, write physical file to disk

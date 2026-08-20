@@ -12,23 +12,21 @@ class ExifService {
    */
   async extractMetadata(file) {
     const isVideo = file.type.startsWith('video/');
-    const defaultDate = file.lastModified ? new Date(file.lastModified).toISOString() : new Date().toISOString();
-
     const baseResult = {
       fileName: file.name,
       fileSize: file.size,
       mimeType: file.type || (isVideo ? 'video/mp4' : 'image/jpeg'),
       mediaType: isVideo ? 'video' : 'image',
-      dateTaken: defaultDate,
+      dateTaken: file.lastModified ? new Date(file.lastModified).toISOString() : null,
       latitude: null,
       longitude: null,
       hasGps: false,
       hasExifDate: false,
-      locationName: CONFIG.DEFAULT_LOCATION.name,
-      district: CONFIG.DEFAULT_LOCATION.district || 'Chennai',
-      city: CONFIG.DEFAULT_LOCATION.city,
-      state: CONFIG.DEFAULT_LOCATION.state || 'Tamil Nadu',
-      country: CONFIG.DEFAULT_LOCATION.country,
+      locationName: 'Unspecified Location',
+      district: '',
+      city: '',
+      state: '',
+      country: '',
       exif: {
         make: 'Unknown',
         model: 'Unknown',
