@@ -97,42 +97,32 @@ class GeoService {
 
         const address = data.address || {};
         
-        // Detailed locality resolution for India and Tamil Nadu
+        // Detailed locality resolution for district, city, landmark, state, and country
         const landmark = address.tourism || address.historic || address.amenity || address.leisure || address.building || address.suburb || address.neighbourhood || '';
-        const city = address.city || address.town || address.village || address.municipality || address.city_district || address.state_district || address.county || '';
+        const rawDistrict = address.state_district || address.county || address.district || address.city_district || address.city || address.town || address.village || '';
+        const district = rawDistrict.replace(/ District$/i, '').trim();
+        const city = address.city || address.town || address.village || address.municipality || address.suburb || district || '';
         const state = address.state || '';
         const country = address.country || 'India';
         
-        let primaryPlace = city || landmark || state || 'Tamil Nadu';
+        const primaryPlace = city || district || landmark || state || country;
         let locationName = '';
 
-        if (state === 'Tamil Nadu' || state.toLowerCase().includes('tamil')) {
-          if (landmark && city && landmark !== city) {
-            locationName = `${landmark}, ${city}, Tamil Nadu`;
-          } else if (city) {
-            locationName = `${city}, Tamil Nadu`;
-          } else {
-            locationName = `Tamil Nadu, India`;
-          }
-        } else if (country === 'India' || country.toLowerCase().includes('india')) {
-          if (city && state && city !== state) {
-            locationName = `${city}, ${state}, India`;
-          } else if (city) {
-            locationName = `${city}, India`;
-          } else if (state) {
-            locationName = `${state}, India`;
-          } else {
-            locationName = 'India';
-          }
+        if (landmark && primaryPlace && landmark !== primaryPlace) {
+          locationName = `${landmark}, ${primaryPlace}${state ? `, ${state}` : ''}`;
+        } else if (primaryPlace && state && primaryPlace !== state) {
+          locationName = `${primaryPlace}, ${state}`;
+        } else if (primaryPlace) {
+          locationName = country ? `${primaryPlace}, ${country}` : primaryPlace;
         } else {
-          const mainCity = city || 'Unknown City';
-          locationName = mainCity !== 'Unknown City' ? `${mainCity}, ${country}` : country;
+          locationName = country || 'Unknown Location';
         }
 
         const result = {
           name: locationName,
-          city: city || primaryPlace || 'Tamil Nadu',
-          state: state || 'Tamil Nadu',
+          district: district || city || primaryPlace || 'Unknown District',
+          city: city || district || 'Unknown City',
+          state: state,
           country: country,
           lat: Number(item.lat),
           lng: Number(item.lng),
@@ -146,9 +136,10 @@ class GeoService {
       } catch (err) {
         console.warn('Reverse geocoding failed, falling back to coordinates:', err);
         const fallback = {
-          name: `Tamil Nadu (${item.lat.toFixed(2)}, ${item.lng.toFixed(2)})`,
-          city: 'Tamil Nadu',
-          state: 'Tamil Nadu',
+          name: `Location (${item.lat.toFixed(2)}, ${item.lng.toFixed(2)})`,
+          district: 'Coordinates',
+          city: 'Coordinates',
+          state: '',
           country: 'India',
           lat: Number(item.lat),
           lng: Number(item.lng)
@@ -182,21 +173,24 @@ class GeoService {
       return data.map((item) => {
         const addr = item.address || {};
         const landmark = addr.tourism || addr.historic || addr.amenity || addr.suburb || '';
-        const city = addr.city || addr.town || addr.village || addr.municipality || addr.city_district || addr.county || addr.state || item.name;
+        const rawDistrict = addr.state_district || addr.county || addr.district || addr.city_district || addr.city || addr.town || addr.village || item.name || '';
+        const district = rawDistrict.replace(/ District$/i, '').trim();
+        const city = addr.city || addr.town || addr.village || addr.municipality || district || item.name;
         const state = addr.state || '';
         const country = addr.country || 'India';
         
         let name = city;
-        if (state === 'Tamil Nadu') {
-          name = landmark && landmark !== city ? `${landmark}, ${city}, Tamil Nadu` : `${city}, Tamil Nadu`;
-        } else if (state && state !== city) {
-          name = `${city}, ${state}, ${country}`;
-        } else if (country) {
+        if (landmark && city && landmark !== city) {
+          name = `${landmark}, ${city}${state ? `, ${state}` : ''}`;
+        } else if (city && state && city !== state) {
+          name = `${city}, ${state}`;
+        } else if (city && country) {
           name = `${city}, ${country}`;
         }
 
         return {
           name: name,
+          district: district || city,
           city: city,
           state: state,
           country: country,
