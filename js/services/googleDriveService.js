@@ -254,7 +254,7 @@ class GoogleDriveService {
       throw new Error('Google Drive is not connected');
     }
 
-    const safeLocation = locationName || 'Tamil Nadu, India';
+    const safeLocation = locationName || 'Unspecified Location';
     const targetRootId = this.rootFolderId && this.rootFolderId !== 'root' 
       ? this.rootFolderId 
       : '1P8AFBFU2hkvBz1fpavHPll1EAcqK4idI';
@@ -392,7 +392,7 @@ function doPost(e) {
     var rootFolder = DriveApp.getFolderById(rootFolderId);
     
     // 1. Get or create Location folder (e.g. "Chennai, Tamil Nadu")
-    var locName = data.locationName || "Tamil Nadu, India";
+    var locName = data.locationName || "Unspecified Location";
     var locFolders = rootFolder.getFoldersByName(locName);
     var locFolder = locFolders.hasNext() ? locFolders.next() : rootFolder.createFolder(locName);
     
