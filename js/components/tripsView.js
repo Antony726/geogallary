@@ -375,6 +375,10 @@ export class TripsView {
         mediaType: staged.file.type.startsWith('video/') ? 'video' : 'image',
         dateTaken: staged.meta.dateTaken || new Date(start).toISOString(),
         locationName: itemLoc,
+        district: staged.meta.district || staged.meta.city,
+        city: staged.meta.city,
+        state: staged.meta.state,
+        country: staged.meta.country || 'India',
         latitude: lat,
         longitude: lng,
         fileBlob: staged.file,
@@ -434,6 +438,10 @@ export class TripsView {
         mediaType: staged.file.type.startsWith('video/') ? 'video' : 'image',
         dateTaken: staged.meta.dateTaken || trip.startDate || new Date().toISOString(),
         locationName: itemLoc,
+        district: staged.meta.district || staged.meta.city,
+        city: staged.meta.city,
+        state: staged.meta.state,
+        country: staged.meta.country || 'India',
         latitude: lat,
         longitude: lng,
         fileBlob: staged.file,
@@ -453,6 +461,7 @@ export class TripsView {
     await storageService.saveTrip(trip);
     this.closeAppendMediaModal();
     showToast(`Added ${newPhotoIds.length} items to "${trip.name}"!`, 'success');
+    await this.app.refreshAllViews();
     await this.app.refreshAllViews();
   }
 
